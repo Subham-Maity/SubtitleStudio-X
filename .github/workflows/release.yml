@@ -47,11 +47,18 @@ jobs:
             target: x86_64-apple-darwin
             bundles: dmg,app
             artifact_name: dist-macos-x86_64
-    env:
-      CARGO_TARGET_DIR: ${{ runner.os == 'Windows' && 'D:\a\t' || format('{0}/target', github.workspace) }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure Cargo target directory
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: '"CARGO_TARGET_DIR=D:\a\t" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8'
+
+      - name: Configure Cargo target directory
+        if: runner.os != 'Windows'
+        run: echo "CARGO_TARGET_DIR=${GITHUB_WORKSPACE}/target" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:
@@ -184,7 +191,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p release-assets
-          REL_DIR="${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release"
+          REL_DIR="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
           for deb in "${REL_DIR}"/bundle/deb/*.deb; do
             [ -f "$deb" ] && cp "$deb" "release-assets/SubtitleStudioX-linux-x86_64.deb"
           done
@@ -206,7 +213,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p release-assets
-          REL_DIR="${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release"
+          REL_DIR="${CARGO_TARGET_DIR}/${{ matrix.target }}/release"
           ARCH_NAME="aarch64"
           if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then
             ARCH_NAME="x86_64"
