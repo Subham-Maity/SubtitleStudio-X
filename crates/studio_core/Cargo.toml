@@ -1,0 +1,34 @@
+[package]
+name = "studio_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+vulkan = ["whisper-rs/vulkan"]
+cuda = ["whisper-rs/cuda"]
+metal = ["whisper-rs/metal"]
+
+[dependencies]
+subtitle_render = { path = "../subtitle_render" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+rusqlite = { version = "0.43.0", features = ["bundled"] }
+whisper-rs = { version = "0.16.0", default-features = false }
+notify = "9.0.0"
+reqwest = { version = "0.13.5", features = ["stream"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+whisper-rs = { version = "0.16.0", default-features = false, features = ["vulkan"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+whisper-rs = { version = "0.16.0", default-features = false, features = ["metal"] }
