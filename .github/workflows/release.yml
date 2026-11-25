@@ -1,0 +1,298 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag (for manual runs, e.g. v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build Release (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis,msi
+            artifact_name: dist-windows-x64
+          - label: linux-x86_64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+            artifact_name: dist-linux-x86_64
+          - label: macos-aarch64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: dmg,app
+            artifact_name: dist-macos-aarch64
+          - label: macos-x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            bundles: dmg,app
+            artifact_name: dist-macos-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            clang \
+            libclang-dev \
+            cmake \
+            ninja-build \
+            libvulkan-dev \
+            curl \
+            xz-utils
+          mkdir -p /tmp/vulkansdk
+          curl -fL -o /tmp/vulkan_sdk.tar.xz https://sdk.lunarg.com/sdk/download/latest/linux/vulkan_sdk.tar.xz
+          tar -xf /tmp/vulkan_sdk.tar.xz -C /tmp/vulkansdk --strip-components=1
+          SDK_DIR="$(find /tmp/vulkansdk -maxdepth 2 -type d -name x86_64 | head -n 1)"
+          echo "VULKAN_SDK=${SDK_DIR}" >> "$GITHUB_ENV"
+          echo "${SDK_DIR}/bin" >> "$GITHUB_PATH"
+
+      - name: Install macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja
+
+      - name: Install Windows Vulkan SDK
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe" -OutFile "$env:TEMP\vulkan_sdk.exe"
+          Start-Process -Wait -FilePath "$env:TEMP\vulkan_sdk.exe" -ArgumentList "--root", "C:\VulkanSDK", "--accept-licenses", "--default-answer", "--confirm-command", "install"
+          "VULKAN_SDK=C:\VulkanSDK" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "C:\VulkanSDK\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "CMAKE_GENERATOR=Ninja" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Fetch FFmpeg sidecars (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\scripts\fetch-ffmpeg.ps1
+
+      - name: Fetch FFmpeg sidecars (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -fL -o /tmp/ffmpeg.tar.xz https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz
+          mkdir -p /tmp/ff_linux
+          tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ff_linux --strip-components=1
+          cp /tmp/ff_linux/bin/ffmpeg src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu
+          cp /tmp/ff_linux/bin/ffprobe src-tauri/binaries/ffprobe-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu src-tauri/binaries/ffprobe-x86_64-unknown-linux-gnu
+
+      - name: Fetch FFmpeg sidecars (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          MAC_ARCH="arm64"
+          if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then
+            MAC_ARCH="amd64"
+          fi
+          curl -fL -o /tmp/ffmpeg.zip "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${MAC_ARCH}/snapshot/ffmpeg.zip"
+          curl -fL -o /tmp/ffprobe.zip "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${MAC_ARCH}/snapshot/ffprobe.zip"
+          unzip -o /tmp/ffmpeg.zip -d /tmp/ff_mac
+          unzip -o /tmp/ffprobe.zip -d /tmp/ff_mac
+          cp /tmp/ff_mac/ffmpeg "src-tauri/binaries/ffmpeg-${{ matrix.target }}"
+          cp /tmp/ff_mac/ffprobe "src-tauri/binaries/ffprobe-${{ matrix.target }}"
+          chmod +x "src-tauri/binaries/ffmpeg-${{ matrix.target }}" "src-tauri/binaries/ffprobe-${{ matrix.target }}"
+
+      - name: Build Tauri bundle (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npx --yes @tauri-apps/cli build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Build Tauri bundle (Linux)
+        if: runner.os == 'Linux'
+        env:
+          NO_STRIP: "true"
+        run: npx --yes @tauri-apps/cli build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Build Tauri bundle (macOS)
+        if: runner.os == 'macOS'
+        run: npx --yes @tauri-apps/cli build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Package release assets (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          $relDir = "target\${{ matrix.target }}\release"
+          Get-ChildItem "$relDir\bundle\nsis\*.exe" | ForEach-Object {
+            Copy-Item $_.FullName "release-assets\SubtitleStudioX-windows-x64-setup.exe" -Force
+          }
+          Get-ChildItem "$relDir\bundle\msi\*.msi" | ForEach-Object {
+            Copy-Item $_.FullName "release-assets\SubtitleStudioX-windows-x64.msi" -Force
+          }
+          $portable = "release-assets\portable"
+          New-Item -ItemType Directory -Force -Path "$portable\fonts" | Out-Null
+          Copy-Item "$relDir\SubtitleStudio X.exe","$relDir\subtitle-studio-native.exe" -ErrorAction SilentlyContinue -Destination "$portable\"
+          Copy-Item "$relDir\ffmpeg.exe","$relDir\ffprobe.exe" -ErrorAction SilentlyContinue -Destination "$portable\"
+          Copy-Item "src-tauri\fonts\*" "$portable\fonts\" -Force
+          Copy-Item "README.md","LICENSE" "$portable\" -Force
+          Compress-Archive -Path "$portable\*" -DestinationPath "release-assets\SubtitleStudioX-windows-x64-portable.zip" -Force
+          Remove-Item -Recurse -Force $portable
+
+      - name: Package release assets (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p release-assets
+          REL_DIR="target/${{ matrix.target }}/release"
+          cp "${REL_DIR}"/bundle/deb/*.deb release-assets/ 2>/dev/null || true
+          cp "${REL_DIR}"/bundle/appimage/*.AppImage release-assets/ 2>/dev/null || true
+          STAGE="/tmp/ssx-linux"
+          rm -rf "$STAGE" && mkdir -p "$STAGE/fonts"
+          BIN_PATH="$(find "${REL_DIR}" -maxdepth 1 -type f \( -name "subtitle-studio-native" -o -name "SubtitleStudio X" \) | head -n 1)"
+          cp "$BIN_PATH" "$STAGE/subtitle-studio-x"
+          cp "${REL_DIR}/ffmpeg" "${REL_DIR}/ffprobe" "$STAGE/" 2>/dev/null || true
+          cp src-tauri/fonts/* "$STAGE/fonts/"
+          cp README.md LICENSE "$STAGE/"
+          tar -czf release-assets/SubtitleStudioX-linux-x86_64.tar.gz -C /tmp ssx-linux
+
+      - name: Package release assets (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p release-assets
+          REL_DIR="target/${{ matrix.target }}/release"
+          ARCH_NAME="aarch64"
+          if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then
+            ARCH_NAME="x86_64"
+          fi
+          for dmg in "${REL_DIR}"/bundle/dmg/*.dmg; do
+            [ -f "$dmg" ] && cp "$dmg" "release-assets/SubtitleStudioX-macos-${ARCH_NAME}.dmg"
+          done
+          if [ -d "${REL_DIR}/bundle/macos/SubtitleStudio X.app" ]; then
+            tar -czf "release-assets/SubtitleStudioX-macos-${ARCH_NAME}.app.tar.gz" -C "${REL_DIR}/bundle/macos" "SubtitleStudio X.app"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: release-assets/*
+
+  publish:
+    name: Generate Checksums & Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS & Release Notes
+        id: meta
+        env:
+          TAG_INPUT: ${{ inputs.tag_name }}
+          REF_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          TAG="${TAG_INPUT:-$REF_NAME}"
+          VER="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+
+          (cd all-artifacts && sha256sum * > SHA256SUMS.txt)
+
+          # Extract matching section from CHANGELOG.md when present
+          CHANGELOG_SECTION=$(awk -v ver="$VER" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+
+          if [ -z "$CHANGELOG_SECTION" ]; then
+            CHANGELOG_SECTION="- Cross-platform native Rust, Skia, Whisper GPU, and FFmpeg pipeline maintenance and stability improvements."
+          fi
+
+          cat <<EOF > release-notes.md
+          # SubtitleStudio X ${TAG}
+
+          **SubtitleStudio X** is the offline native Rust + Tauri 2 desktop successor to [SubtitleStudio](https://github.com/Subham-Maity/SubtitleStudio) — zero cloud, zero API keys, and unified preview-to-export pixel parity.
+
+          ---
+
+          ## What's New in ${TAG}
+
+          ${CHANGELOG_SECTION}
+
+          ---
+
+          ## Downloads & Platform Support
+
+          | Platform | Package / Archive | GPU Acceleration |
+          |---|---|---|
+          | **Windows 10 / 11 (x64)** | \`SubtitleStudioX-windows-x64-setup.exe\` (NSIS) / \`.msi\` / portable \`.zip\` | Vulkan GPU Whisper (delay-loaded, CPU fallback) + NVENC / AMF / QSV |
+          | **Linux (x86_64)** | \`.deb\`, \`.AppImage\`, portable \`.tar.gz\` | Vulkan GPU Whisper (CPU fallback) + NVENC / QSV / AMF |
+          | **macOS (Apple Silicon arm64)** | \`SubtitleStudioX-macos-aarch64.dmg\` / \`.app.tar.gz\` | Apple Metal Whisper + Apple VideoToolbox |
+          | **macOS (Intel x86_64)** | \`SubtitleStudioX-macos-x86_64.dmg\` / \`.app.tar.gz\` | Apple Metal / CPU + VideoToolbox |
+
+          ---
+
+          ## Verify Downloads (\`SHA256SUMS.txt\`)
+
+          \`\`\`bash
+          # Linux / macOS
+          sha256sum -c SHA256SUMS.txt
+          # Windows PowerShell
+          Get-FileHash .\SubtitleStudioX-windows-x64-setup.exe -Algorithm SHA256
+          \`\`\`
+
+          ---
+
+          ## Platform Notes
+
+          - **First Run AI Models:** Whisper GGML weights (\`base\`, \`small\`, \`large-v3-turbo\`) are not bundled in the installer to keep downloads lean. Open **AI Models** in the top bar to download once locally.
+          - **Windows SmartScreen:** Binaries are unsigned open-source builds compiled on GitHub Actions. Choose **More info -> Run anyway** if SmartScreen prompts.
+          - **macOS Gatekeeper:** If macOS blocks first launch on unsigned builds, open **System Settings -> Privacy & Security -> Open Anyway** (or run \`xattr -cr "/Applications/SubtitleStudio X.app"\`).
+
+          Full Changelog: https://github.com/${REPO}/blob/${TAG}/CHANGELOG.md
+          EOF
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: SubtitleStudio X ${{ steps.meta.outputs.tag }}
+          body_path: release-notes.md
+          files: all-artifacts/*
+          draft: false
+          prerelease: false
+

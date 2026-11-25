@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'LICENSE'
+      - 'CHANGELOG.md'
+      - '.gitignore'
+      - 'assets/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  frontend:
+    name: Frontend Typecheck & Vite Build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  rust-matrix:
+    name: Rust Check, Clippy & Test (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ci-${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            clang \
+            libclang-dev \
+            cmake \
+            ninja-build \
+            libvulkan-dev \
+            curl \
+            xz-utils
+          mkdir -p /tmp/vulkansdk
+          curl -fL -o /tmp/vulkan_sdk.tar.xz https://sdk.lunarg.com/sdk/download/latest/linux/vulkan_sdk.tar.xz
+          tar -xf /tmp/vulkan_sdk.tar.xz -C /tmp/vulkansdk --strip-components=1
+          SDK_DIR="$(find /tmp/vulkansdk -maxdepth 2 -type d -name x86_64 | head -n 1)"
+          echo "VULKAN_SDK=${SDK_DIR}" >> "$GITHUB_ENV"
+          echo "${SDK_DIR}/bin" >> "$GITHUB_PATH"
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja
+
+      - name: Install Windows Vulkan SDK
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe" -OutFile "$env:TEMP\vulkan_sdk.exe"
+          Start-Process -Wait -FilePath "$env:TEMP\vulkan_sdk.exe" -ArgumentList "--root", "C:\VulkanSDK", "--accept-licenses", "--default-answer", "--confirm-command", "install"
+          "VULKAN_SDK=C:\VulkanSDK" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "C:\VulkanSDK\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "CMAKE_GENERATOR=Ninja" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Fetch FFmpeg sidecars (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\scripts\fetch-ffmpeg.ps1
+
+      - name: Fetch FFmpeg sidecars (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -fL -o /tmp/ffmpeg.tar.xz https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-linux64-gpl-8.1.tar.xz
+          mkdir -p /tmp/ff_linux
+          tar -xf /tmp/ffmpeg.tar.xz -C /tmp/ff_linux --strip-components=1
+          cp /tmp/ff_linux/bin/ffmpeg src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu
+          cp /tmp/ff_linux/bin/ffprobe src-tauri/binaries/ffprobe-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu src-tauri/binaries/ffprobe-x86_64-unknown-linux-gnu
+
+      - name: Fetch FFmpeg sidecars (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -fL -o /tmp/ffmpeg.zip https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/snapshot/ffmpeg.zip
+          curl -fL -o /tmp/ffprobe.zip https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/snapshot/ffprobe.zip
+          unzip -o /tmp/ffmpeg.zip -d /tmp/ff_mac
+          unzip -o /tmp/ffprobe.zip -d /tmp/ff_mac
+          cp /tmp/ff_mac/ffmpeg src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+          cp /tmp/ff_mac/ffprobe src-tauri/binaries/ffprobe-aarch64-apple-darwin
+          chmod +x src-tauri/binaries/ffmpeg-aarch64-apple-darwin src-tauri/binaries/ffprobe-aarch64-apple-darwin
+
+      - name: Build frontend assets for Tauri compile checks
+        run: npm run build
+
+      - name: Cargo clippy & check
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Cargo test
+        run: cargo test --workspace
+
