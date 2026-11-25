@@ -11,14 +11,14 @@
 **SubtitleStudio X** is the next-generation native desktop successor to [**SubtitleStudio**](https://github.com/Subham-Maity/SubtitleStudio) *(Free & open-source local AI subtitle burner — no cloud, no API key, no subscription)*.<br/>
 No Python server. No Node backend. No Redis. No Docker. Just **Rust + Skia + whisper.cpp + FFmpeg** in a single desktop application.
 
-[![Release](https://img.shields.io/github/v/release/Subham-Maity/subtitle-studio-native?label=release&color=6366f1)](https://github.com/Subham-Maity/subtitle-studio-native/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/Subham-Maity/subtitle-studio-native/ci.yml?label=build)](https://github.com/Subham-Maity/subtitle-studio-native/actions)
+[![Release](https://img.shields.io/github/v/release/Subham-Maity/SubtitleStudio-X?label=release&color=6366f1)](https://github.com/Subham-Maity/SubtitleStudio-X/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/Subham-Maity/SubtitleStudio-X/ci.yml?label=build)](https://github.com/Subham-Maity/SubtitleStudio-X/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Built with Rust](https://img.shields.io/badge/core-Rust%20%2B%20Tauri%202-orange?logo=rust)
 ![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-informational)
 ![100% Offline](https://img.shields.io/badge/privacy-100%25%20offline-10b981)
 
-[**Download**](https://github.com/Subham-Maity/subtitle-studio-native/releases) ·
+[**Download**](https://github.com/Subham-Maity/SubtitleStudio-X/releases) ·
 [**Successor Architecture**](#from-subtitlestudio-v1-to-subtitlestudio-x) ·
 [**Features**](#features-and-rendering-engine) ·
 [**Quick Start**](#installation) ·
@@ -137,7 +137,7 @@ flowchart LR
 
 ## <img src="assets/icons/package.svg" width="22" height="22" align="absmiddle" alt="" /> Installation
 
-Download prebuilt binaries from the [Releases page](https://github.com/Subham-Maity/subtitle-studio-native/releases). Every release includes `SHA256SUMS.txt`.
+Download prebuilt binaries from the [Releases page](https://github.com/Subham-Maity/SubtitleStudio-X/releases). Every release includes `SHA256SUMS.txt`.
 
 | Platform | Recommended Asset | Portable / Alternative | Notes |
 |---|---|---|---|
