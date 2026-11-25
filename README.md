@@ -1,12 +1,23 @@
 <div align="center">
 
+# SubtitleStudio X
+### Offline, GPU-accelerated animated subtitle & transcription studio, built natively in Rust.
+
+
 <img src="assets/hero-architecture.svg" alt="SubtitleStudio X Architecture" width="880" />
 
 <br/>
 
-# SubtitleStudio X
 
-### Offline, GPU-accelerated animated subtitle & transcription studio, built natively in Rust.
+<img width="1916" height="1146" alt="vlcsnap-2026-11-26-02h54m24s834" src="https://github.com/user-attachments/assets/e7e0a9c9-a082-4b9d-9b82-ba8ac0a75cec" />
+
+
+
+
+
+https://github.com/user-attachments/assets/3eac1ab7-80bb-4125-b19f-d88ac69fa285
+
+
 
 **SubtitleStudio X** is the next-generation native desktop successor to [**SubtitleStudio**](https://github.com/Subham-Maity/SubtitleStudio) *(Free & open-source local AI subtitle burner: no cloud, no API key, no subscription)*.<br/>
 No Python server. No Node backend. No Redis. No Docker. Just **Rust + Skia + whisper.cpp + FFmpeg** in a single desktop application.
