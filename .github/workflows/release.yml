@@ -16,6 +16,8 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  MACOSX_DEPLOYMENT_TARGET: '11.0'
+  CMAKE_OSX_DEPLOYMENT_TARGET: '11.0'
 
 jobs:
   build:
@@ -30,21 +32,27 @@ jobs:
             target: x86_64-pc-windows-msvc
             bundles: nsis,msi
             artifact_name: dist-windows-x64
+            target_dir: D:\a\t
           - label: linux-x86_64
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             bundles: deb,appimage
             artifact_name: dist-linux-x86_64
+            target_dir: target
           - label: macos-aarch64
             os: macos-latest
             target: aarch64-apple-darwin
             bundles: dmg,app
             artifact_name: dist-macos-aarch64
+            target_dir: target
           - label: macos-x86_64
             os: macos-latest
             target: x86_64-apple-darwin
             bundles: dmg,app
             artifact_name: dist-macos-x86_64
+            target_dir: target
+    env:
+      CARGO_TARGET_DIR: ${{ matrix.target_dir }}
 
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +63,11 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -92,7 +105,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install cmake ninja
 
-      - name: Install Windows Vulkan SDK
+      - name: Install Windows Vulkan SDK & MSVC flags
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -101,6 +114,8 @@ jobs:
           "VULKAN_SDK=C:\VulkanSDK" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "C:\VulkanSDK\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           "CMAKE_GENERATOR=Ninja" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CFLAGS=/FS" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "CXXFLAGS=/FS" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Fetch FFmpeg sidecars (Windows)
         if: runner.os == 'Windows'
@@ -153,7 +168,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-assets | Out-Null
-          $relDir = "target\${{ matrix.target }}\release"
+          $relDir = "$($env:CARGO_TARGET_DIR)\${{ matrix.target }}\release"
           Get-ChildItem "$relDir\bundle\nsis\*.exe" | ForEach-Object {
             Copy-Item $_.FullName "release-assets\SubtitleStudioX-windows-x64-setup.exe" -Force
           }
@@ -173,7 +188,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p release-assets
-          REL_DIR="target/${{ matrix.target }}/release"
+          REL_DIR="${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release"
           cp "${REL_DIR}"/bundle/deb/*.deb release-assets/ 2>/dev/null || true
           cp "${REL_DIR}"/bundle/appimage/*.AppImage release-assets/ 2>/dev/null || true
           STAGE="/tmp/ssx-linux"
@@ -189,7 +204,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p release-assets
-          REL_DIR="target/${{ matrix.target }}/release"
+          REL_DIR="${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release"
           ARCH_NAME="aarch64"
           if [ "${{ matrix.target }}" = "x86_64-apple-darwin" ]; then
             ARCH_NAME="x86_64"
@@ -232,7 +247,6 @@ jobs:
 
           (cd all-artifacts && sha256sum * > SHA256SUMS.txt)
 
-          # Extract matching section from CHANGELOG.md when present
           CHANGELOG_SECTION=$(awk -v ver="$VER" '
             $0 ~ "^## \\[" ver "\\]" { found=1; next }
             found && /^## \[/ { exit }
@@ -295,4 +309,3 @@ jobs:
           files: all-artifacts/*
           draft: false
           prerelease: false
-
