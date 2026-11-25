@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="260" viewBox="0 0 880 260" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="880" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#09090b"/>
+      <stop offset="55%" stop-color="#111328"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="880" height="260" rx="18" fill="url(#bg)" stroke="#27272a" stroke-width="1.5"/>
+  <!-- Top branding -->
+  <rect x="34" y="28" width="44" height="44" rx="12" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" filter="url(#glow)"/>
+  <path d="M46 44h20v12H46zM50 52h5M57 52h5" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round"/>
+  <text x="92" y="48" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="700">SubtitleStudio X</text>
+  <text x="92" y="68" fill="#a1a1aa" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13">100% Offline Rust + Skia + Whisper + FFmpeg GPU Caption Engine</text>
+
+  <!-- Pipeline boxes -->
+  <rect x="34" y="102" width="175" height="92" rx="12" fill="#18181b" stroke="#3f3f46"/>
+  <text x="50" y="128" fill="#818cf8" font-family="ui-monospace, monospace" font-size="11" font-weight="700">01 / INGEST</text>
+  <text x="50" y="150" fill="#f4f4f5" font-family="system-ui, sans-serif" font-size="14" font-weight="600">FFprobe + SQLite</text>
+  <text x="50" y="170" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">Rotation-aware metadata</text>
+  <text x="50" y="184" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">16 kHz mono WAV extract</text>
+
+  <path d="M214 148h26" stroke="url(#accent)" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="240,143 248,148 240,153" fill="#818cf8"/>
+
+  <rect x="252" y="102" width="185" height="92" rx="12" fill="#18181b" stroke="#3f3f46"/>
+  <text x="268" y="128" fill="#34d399" font-family="ui-monospace, monospace" font-size="11" font-weight="700">02 / WHISPER.CPP</text>
+  <text x="268" y="150" fill="#f4f4f5" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Vulkan / Metal / CPU</text>
+  <text x="268" y="170" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">Word timestamps + Beam 5</text>
+  <text x="268" y="184" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">Hindi, Hinglish, Urdu, EN</text>
+
+  <path d="M442 148h26" stroke="url(#accent)" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="468,143 476,148 468,153" fill="#818cf8"/>
+
+  <rect x="480" y="102" width="185" height="92" rx="12" fill="#18181b" stroke="#6366f1"/>
+  <text x="496" y="128" fill="#c084fc" font-family="ui-monospace, monospace" font-size="11" font-weight="700">03 / SUBTITLE_RENDER</text>
+  <text x="496" y="150" fill="#f4f4f5" font-family="system-ui, sans-serif" font-size="14" font-weight="600">Skia + HarfBuzz</text>
+  <text x="496" y="170" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">Preview == Export (diff 0)</text>
+  <text x="496" y="184" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">9 anims, glow, karaoke</text>
+
+  <path d="M670 148h26" stroke="url(#accent)" stroke-width="2" stroke-linecap="round"/>
+  <polygon points="696,143 704,148 696,153" fill="#818cf8"/>
+
+  <rect x="708" y="102" width="138" height="92" rx="12" fill="#18181b" stroke="#3f3f46"/>
+  <text x="724" y="128" fill="#f59e0b" font-family="ui-monospace, monospace" font-size="11" font-weight="700">04 / EXPORT</text>
+  <text x="724" y="150" fill="#f4f4f5" font-family="system-ui, sans-serif" font-size="14" font-weight="600">FFmpeg Pipe</text>
+  <text x="724" y="170" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">NVENC / AMF / QSV</text>
+  <text x="724" y="184" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="11">VideoToolbox / x264</text>
+
+  <!-- Footer bar -->
+  <text x="36" y="230" fill="#71717a" font-family="ui-monospace, monospace" font-size="11">NO CLOUD  ·  NO PYTHON  ·  NO NODE RUNTIME  ·  WINDOWS / LINUX / MACOS  ·  AUTHOR: SUBHAM-MAITY</text>
+</svg>
+
