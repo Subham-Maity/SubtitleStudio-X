@@ -273,7 +273,7 @@ jobs:
           cat <<EOF > release-notes.md
           # SubtitleStudio X ${TAG}
 
-          **SubtitleStudio X** is the offline native Rust + Tauri 2 desktop successor to [SubtitleStudio](https://github.com/Subham-Maity/SubtitleStudio) — zero cloud, zero API keys, and unified preview-to-export pixel parity.
+          **SubtitleStudio X** is the offline native Rust + Tauri 2 desktop successor to [SubtitleStudio](https://github.com/Subham-Maity/SubtitleStudio): zero cloud, zero API keys, and unified preview-to-export pixel parity.
 
           ---
 

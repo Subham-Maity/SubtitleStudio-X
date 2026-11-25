@@ -6,9 +6,9 @@
 
 # SubtitleStudio X
 
-### Offline, GPU-accelerated animated subtitle & transcription studio — built natively in Rust.
+### Offline, GPU-accelerated animated subtitle & transcription studio, built natively in Rust.
 
-**SubtitleStudio X** is the next-generation native desktop successor to [**SubtitleStudio**](https://github.com/Subham-Maity/SubtitleStudio) *(Free & open-source local AI subtitle burner — no cloud, no API key, no subscription)*.<br/>
+**SubtitleStudio X** is the next-generation native desktop successor to [**SubtitleStudio**](https://github.com/Subham-Maity/SubtitleStudio) *(Free & open-source local AI subtitle burner: no cloud, no API key, no subscription)*.<br/>
 No Python server. No Node backend. No Redis. No Docker. Just **Rust + Skia + whisper.cpp + FFmpeg** in a single desktop application.
 
 [![Release](https://img.shields.io/github/v/release/Subham-Maity/SubtitleStudio-X?label=release&color=6366f1)](https://github.com/Subham-Maity/SubtitleStudio-X/releases)
@@ -34,7 +34,7 @@ No Python server. No Node backend. No Redis. No Docker. Just **Rust + Skia + whi
 
 ## From SubtitleStudio (v1) to SubtitleStudio X
 
-The original [SubtitleStudio](https://github.com/Subham-Maity/SubtitleStudio) proved you can transcribe, style, and burn animated captions locally without cloud APIs — using Next.js, NestJS, Redis, PostgreSQL, Python (`faster-whisper`), and `.ass`/Canvas rendering.
+The original [SubtitleStudio](https://github.com/Subham-Maity/SubtitleStudio) proved you can transcribe, style, and burn animated captions locally without cloud APIs using Next.js, NestJS, Redis, PostgreSQL, Python (`faster-whisper`), and `.ass`/Canvas rendering.
 
 **SubtitleStudio X** replaces the entire multi-runtime stack with one pure-Rust core:
 
@@ -55,7 +55,7 @@ The original [SubtitleStudio](https://github.com/Subham-Maity/SubtitleStudio) pr
 |---|---|
 | <img src="assets/icons/zap.svg" width="16" height="16" align="absmiddle" alt="" /> **Zero Cloud, Zero API Keys** | All speech recognition, styling, previewing, and hardware video encoding execute 100% locally on your hardware. |
 | <img src="assets/icons/layers.svg" width="16" height="16" align="absmiddle" alt="" /> **Pixel-Identical Preview & Export** | Live `<canvas>` preview and final video export call the exact same pure `subtitle_render::render_frame` function (`diff == 0` verified). |
-| <img src="assets/icons/cpu.svg" width="16" height="16" align="absmiddle" alt="" /> **Works on Every GPU (or No GPU)** | Accelerates Whisper with Vulkan (Windows/Linux) or Metal (macOS) and FFmpeg with NVENC, AMF, QSV, or VideoToolbox — cleanly falling back to CPU when absent. |
+| <img src="assets/icons/cpu.svg" width="16" height="16" align="absmiddle" alt="" /> **Works on Every GPU (or No GPU)** | Accelerates Whisper with Vulkan (Windows/Linux) or Metal (macOS) and FFmpeg with NVENC, AMF, QSV, or VideoToolbox, cleanly falling back to CPU when absent. |
 | <img src="assets/icons/languages.svg" width="16" height="16" align="absmiddle" alt="" /> **Multilingual Precision** | Custom HarfBuzz shaping renders English, Hindi (Devanagari & Roman Hinglish), Urdu/RTL, and color emoji identically on canvas and disk. |
 | <img src="assets/icons/film.svg" width="16" height="16" align="absmiddle" alt="" /> **Creator-Grade Typography** | 9 entrance animations, 2 exits, 3 index-accurate karaoke modes, clip/mask strokes, neon glow, gradients, rotation, and live font hot-reload. |
 | <img src="assets/icons/folder.svg" width="16" height="16" align="absmiddle" alt="" /> **Batch Folder & Merge Engine** | Auto-detect spoken language per clip, translate non-English tracks to English, resume cleanly via `index.json`, and merge timelines to master `.txt`/`.srt`. |
@@ -123,7 +123,7 @@ flowchart LR
 
 ### Cue Generation & Language Modes
 - **Exact Cue Rules:** Breaks lines at `words_per_cue` (default `6`) or pauses `> 700 ms`, appends `150 ms` tail padding, clamps overlaps cleanly (`max(start + 100, nextStart - 20)`), and proportionally redistributes token timings when cues are manually edited.
-- **Whisper Language Modes:** `auto`, `en` (translate any language to English), `hi-strict` (Devanagari prompt), `hi`, `hi-roman` (Hinglish Roman script prompt), `ur`, `es`, `fr` — running with `BeamSearch(5)`, `no_context`, and per-token timestamps.
+- **Whisper Language Modes:** `auto`, `en` (translate any language to English), `hi-strict` (Devanagari prompt), `hi`, `hi-roman` (Hinglish Roman script prompt), `ur`, `es`, `fr` running with `BeamSearch(5)`, `no_context`, and per-token timestamps.
 
 ### Export Modes & Encoder Priority
 - **Overlay Mode:** Streams straight-alpha frames into FFmpeg (`[0:v]fps=...,format=yuv420p[bg];[bg][1:v]overlay=...`) normalizing VFR inputs cleanly with `-c:a copy` (or AAC 192k when container requires).
@@ -218,7 +218,7 @@ npx @tauri-apps/cli build
 
 - **Windows SmartScreen / Defender Warning:** Open-source binaries are built publicly on GitHub Actions without a commercial EV code-signing certificate. Click **More info → Run anyway** on first launch.
 - **macOS Gatekeeper Block:** Right-click **Open**, use **System Settings → Privacy & Security → Open Anyway**, or run `xattr -cr "/Applications/SubtitleStudio X.app"`.
-- **Hardware Export Falls Back to CPU:** Verify your GPU driver is up to date (for NVIDIA Pascal/GTX 10-series drivers such as `581.57`, ensure you are using the bundled FFmpeg `n8.1` sidecar rather than an external outdated/incompatible FFmpeg in `PATH`).
+- **Hardware Export Falls Back to CPU:** Verify your GPU driver is up to date and ensure the application is using its bundled FFmpeg `n8.1` sidecar rather than an older external FFmpeg binary on `PATH`.
 
 ---
 

@@ -2,6 +2,13 @@
 
 All notable changes to **SubtitleStudio X** are documented in this file.
 
+## [0.1.1] - 2026-11-25
+
+### What's New in v0.1.1
+- **Motion & Glass Studio UI Upgrade:** Added spring-driven navigation pill transitions (`layoutId`), `AnimatePresence` route and modal choreography, atmospheric glass surfaces, reactive dropzone aura, staggered project cards, and a `scaleX` spring progress bar with full `prefers-reduced-motion` support.
+- **Cross-Platform Packaging & Linux Stability:** Gated Linux hardware decode probing to prevent `libva-drm.so.2` aborts on headless/CPU systems, standardized absolute `CARGO_TARGET_DIR` paths in CI/Release, and cleaned up Linux `.deb` and `.AppImage` release artifact naming.
+- **Documentation Polish:** Refined `README.md` formatting and troubleshooting notes.
+
 ## [0.1.0] - 2026-11-25
 
 ### What's New in v0.1.0 (Initial Native Release)
