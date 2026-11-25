@@ -32,27 +32,23 @@ jobs:
             target: x86_64-pc-windows-msvc
             bundles: nsis,msi
             artifact_name: dist-windows-x64
-            target_dir: D:\a\t
           - label: linux-x86_64
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             bundles: deb,appimage
             artifact_name: dist-linux-x86_64
-            target_dir: target
           - label: macos-aarch64
             os: macos-latest
             target: aarch64-apple-darwin
             bundles: dmg,app
             artifact_name: dist-macos-aarch64
-            target_dir: target
           - label: macos-x86_64
             os: macos-latest
             target: x86_64-apple-darwin
             bundles: dmg,app
             artifact_name: dist-macos-x86_64
-            target_dir: target
     env:
-      CARGO_TARGET_DIR: ${{ matrix.target_dir }}
+      CARGO_TARGET_DIR: ${{ runner.os == 'Windows' && 'D:\a\t' || format('{0}/target', github.workspace) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -189,16 +185,22 @@ jobs:
         run: |
           mkdir -p release-assets
           REL_DIR="${{ env.CARGO_TARGET_DIR }}/${{ matrix.target }}/release"
-          cp "${REL_DIR}"/bundle/deb/*.deb release-assets/ 2>/dev/null || true
-          cp "${REL_DIR}"/bundle/appimage/*.AppImage release-assets/ 2>/dev/null || true
+          for deb in "${REL_DIR}"/bundle/deb/*.deb; do
+            [ -f "$deb" ] && cp "$deb" "release-assets/SubtitleStudioX-linux-x86_64.deb"
+          done
+          for appimg in "${REL_DIR}"/bundle/appimage/*.AppImage; do
+            [ -f "$appimg" ] && cp "$appimg" "release-assets/SubtitleStudioX-linux-x86_64.AppImage"
+          done
           STAGE="/tmp/ssx-linux"
           rm -rf "$STAGE" && mkdir -p "$STAGE/fonts"
           BIN_PATH="$(find "${REL_DIR}" -maxdepth 1 -type f \( -name "subtitle-studio-native" -o -name "SubtitleStudio X" \) | head -n 1)"
+          test -n "$BIN_PATH" && test -f "$BIN_PATH"
           cp "$BIN_PATH" "$STAGE/subtitle-studio-x"
           cp "${REL_DIR}/ffmpeg" "${REL_DIR}/ffprobe" "$STAGE/" 2>/dev/null || true
           cp src-tauri/fonts/* "$STAGE/fonts/"
           cp README.md LICENSE "$STAGE/"
           tar -czf release-assets/SubtitleStudioX-linux-x86_64.tar.gz -C /tmp ssx-linux
+          ls -lh release-assets/
 
       - name: Package release assets (macOS)
         if: runner.os == 'macOS'
@@ -212,14 +214,18 @@ jobs:
           for dmg in "${REL_DIR}"/bundle/dmg/*.dmg; do
             [ -f "$dmg" ] && cp "$dmg" "release-assets/SubtitleStudioX-macos-${ARCH_NAME}.dmg"
           done
+          test -f "release-assets/SubtitleStudioX-macos-${ARCH_NAME}.dmg"
           if [ -d "${REL_DIR}/bundle/macos/SubtitleStudio X.app" ]; then
             tar -czf "release-assets/SubtitleStudioX-macos-${ARCH_NAME}.app.tar.gz" -C "${REL_DIR}/bundle/macos" "SubtitleStudio X.app"
           fi
+          test -f "release-assets/SubtitleStudioX-macos-${ARCH_NAME}.app.tar.gz"
+          ls -lh release-assets/
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: release-assets/*
+          if-no-files-found: error
 
   publish:
     name: Generate Checksums & Publish GitHub Release

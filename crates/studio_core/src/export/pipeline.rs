@@ -91,9 +91,10 @@ where
     let mut args: Vec<String> = vec!["-y".into()];
     match req.mode {
         ExportMode::Overlay => {
+            if cfg!(not(target_os = "linux")) && encoder.is_hardware {
+                args.extend(["-hwaccel".into(), "auto".into()]);
+            }
             args.extend([
-                "-hwaccel".into(),
-                "auto".into(),
                 "-i".into(),
                 project.storage_path.clone(),
                 "-f".into(),
