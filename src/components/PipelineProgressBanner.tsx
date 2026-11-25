@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { motion } from "motion/react";
 import {
   AlertCircle,
   Clock,
@@ -179,9 +180,11 @@ export function PipelineProgressBanner({
 
       {stage !== "FAILED" && stage !== "UPLOADED" && (
         <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 transition-all duration-300"
-            style={{ width: `${pct}%` }}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: Math.max(0.02, Math.min(1, pct / 100)) }}
+            transition={{ type: "spring", stiffness: 140, damping: 24 }}
+            className="h-full w-full origin-left bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400"
           />
         </div>
       )}

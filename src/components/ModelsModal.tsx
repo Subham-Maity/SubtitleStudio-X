@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
+import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, Cpu, Download, Loader2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -45,8 +46,6 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
     };
   }, [open, queryClient]);
 
-  if (!open) return null;
-
   const handleDownload = async (modelId: string) => {
     setDownloadingId(modelId);
     setProgress({
@@ -87,8 +86,23 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-      <Card className="max-w-xl w-full p-6 space-y-5 bg-zinc-950 border-zinc-800 relative">
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 6 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-xl w-full"
+          >
+            <Card className="w-full p-6 space-y-5 bg-zinc-950/95 border-zinc-800 relative">
         <button
           type="button"
           onClick={onClose}
@@ -196,7 +210,10 @@ export function ModelsModal({ open, onClose }: ModelsModalProps) {
           </Button>
         </div>
       </Card>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

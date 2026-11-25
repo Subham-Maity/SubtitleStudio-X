@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { AnimatePresence, motion } from "motion/react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -177,7 +178,7 @@ export function HomeView() {
             AI Subtitles for Your Videos
           </h2>
           <p className="text-xs text-zinc-400">
-            100% Offline Windows Studio &bull; Whisper Vulkan/CPU &bull; Skia WYSIWYG &bull; NVENC/AMF/QSV/x264
+            100% Offline Desktop Studio &bull; Whisper GPU/CPU &bull; Skia WYSIWYG &bull; Hardware Video Export
           </p>
         </div>
 
@@ -218,18 +219,32 @@ export function HomeView() {
       </div>
 
       {/* Dropzone */}
-      <div
+      <motion.div
+        whileHover={{ scale: 1.005 }}
+        whileTap={{ scale: 0.996 }}
+        animate={{
+          scale: isDragging ? 1.012 : 1,
+        }}
+        transition={{ type: "spring", stiffness: 320, damping: 26 }}
         onClick={() => void handleBrowseVideos()}
-        className={`rounded-3xl border-2 border-dashed p-12 text-center cursor-pointer transition-all ${
+        className={`relative overflow-hidden rounded-3xl border-2 border-dashed p-12 text-center cursor-pointer transition-colors ${
           isDragging
-            ? "border-indigo-500 bg-indigo-500/10 scale-[1.01] shadow-2xl"
-            : "border-zinc-800 bg-zinc-900/40 hover:border-indigo-500/70 hover:bg-zinc-900/70"
+            ? "border-indigo-400 bg-indigo-500/12 shadow-[0_0_48px_-12px_rgba(99,102,241,0.55)]"
+            : "studio-glass border-zinc-800/90 hover:border-indigo-500/65"
         }`}
       >
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-20 h-20 rounded-3xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-96 rounded-full bg-indigo-500/12 blur-3xl"
+        />
+        <div className="relative flex flex-col items-center space-y-4">
+          <motion.div
+            animate={isDragging ? { y: -4, scale: 1.08 } : { y: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 340, damping: 22 }}
+            className="w-20 h-20 rounded-3xl bg-indigo-500/15 border border-indigo-500/35 flex items-center justify-center text-indigo-400 shadow-[0_0_24px_rgba(99,102,241,0.22)]"
+          >
             <Upload className="w-10 h-10" />
-          </div>
+          </motion.div>
           <div className="space-y-1.5">
             <h3 className="text-xl font-extrabold text-white flex items-center justify-center gap-2">
               Drag &amp; Drop Video(s) Here
@@ -244,7 +259,7 @@ export function HomeView() {
             Select Video File(s)
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Project List */}
       <div className="space-y-4">
@@ -261,68 +276,80 @@ export function HomeView() {
             Loading projects...
           </div>
         ) : projects.length === 0 ? (
-          <Card className="p-8 text-center text-xs text-zinc-400">
+          <Card className="p-8 text-center text-xs text-zinc-400 studio-glass">
             No video projects yet. Drop or select a video above to start transcribing offline.
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {projects.map((p) => {
+            {projects.map((p, idx) => {
               const sec = Math.round(p.durationMs / 1000);
               const mins = Math.floor(sec / 60);
               const rem = sec % 60;
               const formatted = `${mins}:${rem.toString().padStart(2, "0")}`;
               return (
-                <Card key={p.id} className="p-5 space-y-4 hover:border-indigo-500/50 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <h4 className="text-sm font-bold text-white truncate" title={p.originalFilename}>
-                        {p.originalFilename}
-                      </h4>
-                      <div className="flex items-center gap-3 text-[11px] text-zinc-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatted}
-                        </span>
-                        <span>
-                          {p.width}x{p.height} &bull; {p.fps} fps &bull; {p.cueCount} cues
-                        </span>
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.24,
+                    delay: Math.min(idx * 0.045, 0.25),
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  whileHover={{ y: -2 }}
+                >
+                  <Card className="p-5 space-y-4 studio-glass hover:border-indigo-500/50 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <h4 className="text-sm font-bold text-white truncate" title={p.originalFilename}>
+                          {p.originalFilename}
+                        </h4>
+                        <div className="flex items-center gap-3 text-[11px] text-zinc-400 tabular-nums">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatted}
+                          </span>
+                          <span>
+                            {p.width}x{p.height} &bull; {p.fps} fps &bull; {p.cueCount} cues
+                          </span>
+                        </div>
                       </div>
+
+                      {p.status === "TRANSCRIBED" ? (
+                        <Badge variant="success">
+                          <CheckCircle2 className="w-3 h-3" /> Ready
+                        </Badge>
+                      ) : p.status === "FAILED" ? (
+                        <Badge variant="destructive">
+                          <AlertCircle className="w-3 h-3" /> Failed
+                        </Badge>
+                      ) : (
+                        <Badge variant="default">
+                          <Loader2 className="w-3 h-3 animate-spin" /> {p.status}
+                        </Badge>
+                      )}
                     </div>
 
-                    {p.status === "TRANSCRIBED" ? (
-                      <Badge variant="success">
-                        <CheckCircle2 className="w-3 h-3" /> Ready
-                      </Badge>
-                    ) : p.status === "FAILED" ? (
-                      <Badge variant="destructive">
-                        <AlertCircle className="w-3 h-3" /> Failed
-                      </Badge>
-                    ) : (
-                      <Badge variant="default">
-                        <Loader2 className="w-3 h-3 animate-spin" /> {p.status}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      className="flex-1"
-                      variant="secondary"
-                      onClick={() => setRoute({ view: "editor", projectId: p.id })}
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                      Open Studio Editor
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => setProjectToDelete(p)}
-                      title="Delete Project"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </Card>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        className="flex-1"
+                        variant="secondary"
+                        onClick={() => setRoute({ view: "editor", projectId: p.id })}
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                        Open Studio Editor
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => setProjectToDelete(p)}
+                        title="Delete Project"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                </motion.div>
               );
             })}
           </div>
@@ -330,86 +357,118 @@ export function HomeView() {
       </div>
 
       {/* Language Selection Modal before Import */}
-      {stagedPaths.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <Card className="max-w-lg w-full p-6 space-y-5 bg-zinc-950 border-zinc-800 relative">
-            <button
-              type="button"
-              onClick={() => setStagedPaths([])}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
+      <AnimatePresence>
+        {stagedPaths.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-lg w-full"
             >
-              <X className="w-4 h-4" />
-            </button>
+              <Card className="w-full p-6 space-y-5 bg-zinc-950/95 border-zinc-800 relative">
+                <button
+                  type="button"
+                  onClick={() => setStagedPaths([])}
+                  className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
 
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/15 text-indigo-400">
-                <Languages className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Select Target Speech Language</h3>
-                <p className="text-xs text-zinc-400">
-                  {stagedPaths.length} video file(s) staged for offline transcription
-                </p>
-              </div>
-            </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/15 text-indigo-400">
+                    <Languages className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Select Target Speech Language</h3>
+                    <p className="text-xs text-zinc-400">
+                      {stagedPaths.length} video file(s) staged for offline transcription
+                    </p>
+                  </div>
+                </div>
 
-            <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
-              {LANGUAGE_OPTIONS.map((lang) => {
-                const active = selectedLanguage === lang.code;
-                return (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    onClick={() => setSelectedLanguage(lang.code)}
-                    className={`w-full p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      active
-                        ? "border-indigo-500 bg-indigo-500/15 text-white"
-                        : "border-zinc-800 bg-zinc-900/50 text-zinc-300 hover:border-zinc-700"
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{lang.name}</div>
-                    <div className="text-[10px] text-zinc-400">{lang.desc}</div>
-                  </button>
-                );
-              })}
-            </div>
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+                  {LANGUAGE_OPTIONS.map((lang) => {
+                    const active = selectedLanguage === lang.code;
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => setSelectedLanguage(lang.code)}
+                        className={`w-full p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                          active
+                            ? "border-indigo-500 bg-indigo-500/15 text-white"
+                            : "border-zinc-800 bg-zinc-900/50 text-zinc-300 hover:border-zinc-700"
+                        }`}
+                      >
+                        <div className="text-xs font-bold">{lang.name}</div>
+                        <div className="text-[10px] text-zinc-400">{lang.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
-              <Button variant="secondary" onClick={() => setStagedPaths([])} disabled={isImporting}>
-                Cancel
-              </Button>
-              <Button onClick={() => void handleConfirmImport()} disabled={isImporting}>
-                {isImporting ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                )}
-                Start AI Transcription
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-800">
+                  <Button variant="secondary" onClick={() => setStagedPaths([])} disabled={isImporting}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => void handleConfirmImport()} disabled={isImporting}>
+                    {isImporting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    )}
+                    Start AI Transcription
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation Modal */}
-      {projectToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <Card className="max-w-md w-full p-6 space-y-4 bg-zinc-950 border-red-500/30">
-            <h4 className="text-base font-bold text-white">Delete Subtitle Project?</h4>
-            <p className="text-xs text-zinc-400">
-              Permanently remove <strong className="text-white">{projectToDelete.originalFilename}</strong> and its database cues/exports? Your original source video file on disk will not be deleted.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setProjectToDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={() => void handleDeleteConfirm()}>
-                Delete Project
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <AnimatePresence>
+        {projectToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 6 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-md w-full"
+            >
+              <Card className="w-full p-6 space-y-4 bg-zinc-950/95 border-red-500/30">
+                <h4 className="text-base font-bold text-white">Delete Subtitle Project?</h4>
+                <p className="text-xs text-zinc-400">
+                  Permanently remove <strong className="text-white">{projectToDelete.originalFilename}</strong> and its database cues/exports? Your original source video file on disk will not be deleted.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setProjectToDelete(null)}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={() => void handleDeleteConfirm()}>
+                    Delete Project
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

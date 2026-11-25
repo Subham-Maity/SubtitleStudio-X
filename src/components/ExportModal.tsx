@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import { save as saveFileDialog } from "@tauri-apps/plugin-dialog";
+import { motion } from "motion/react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -142,8 +143,19 @@ export function ExportModal({ open, onClose, project }: ExportModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-      <Card className="max-w-xl w-full p-6 space-y-5 bg-zinc-950 border-zinc-800 relative">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.16 }}
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-xl w-full"
+      >
+        <Card className="w-full p-6 space-y-5 bg-zinc-950/95 border-zinc-800 relative">
         <button
           type="button"
           onClick={onClose}
@@ -358,7 +370,8 @@ export function ExportModal({ open, onClose, project }: ExportModalProps) {
           </Button>
         )}
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
