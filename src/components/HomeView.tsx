@@ -151,6 +151,7 @@ export function HomeView() {
       const resetCount = await stopAndClearQueue();
       toast.success(`Stopped active tasks and reset ${resetCount} project(s)`);
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["project"] });
     } catch (err) {
       toast.error(formatTauriError(err));
     } finally {

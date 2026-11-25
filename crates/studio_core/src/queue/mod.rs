@@ -307,8 +307,12 @@ where
         let mp = model_path.clone();
         let lang = effective_lang.clone();
         let cancel_cb = cancel.clone();
+        let cancel_for_seg = cancel.clone();
         move || {
             w.transcribe(&mp, &pcm, lang.as_deref(), cancel_cb, move |seg_pct, msg| {
+                if cancel_for_seg.is_cancelled() {
+                    return;
+                }
                 let scaled = 35 + ((u16::from(seg_pct) * 50) / 100) as u8;
                 emit_for_cb(PipelineProgressEvent {
                     project_id: pid_for_cb.clone(),

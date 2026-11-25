@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import { motion } from "motion/react";
 import {
@@ -35,6 +36,7 @@ export function PipelineProgressBanner({
   errorMessage,
   onCompleted,
 }: PipelineProgressBannerProps) {
+  const queryClient = useQueryClient();
   const [stage, setStage] = useState<string>(status);
   const [pct, setPct] = useState<number>(10);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
@@ -42,6 +44,7 @@ export function PipelineProgressBanner({
   const [detectedLang, setDetectedLang] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(errorMessage);
   const [logs, setLogs] = useState<LogLine[]>([]);
+  const [isStopping, setIsStopping] = useState<boolean>(false);
   const logBoxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -95,12 +98,20 @@ export function PipelineProgressBanner({
   if (stage === "TRANSCRIBED") return null;
 
   const handleStopAndReset = async () => {
+    setIsStopping(true);
     try {
-      await resetPipeline(projectId);
-      setStage("UPLOADED");
+      const nextStatus = await resetPipeline(projectId);
+      setStage(nextStatus);
+      setPct(0);
+      setLogs([]);
+      toast.success("Transcription stopped and queue cleared");
+      await queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
       onCompleted();
     } catch (err) {
       toast.error(formatTauriError(err));
+    } finally {
+      setIsStopping(false);
     }
   };
 
@@ -165,8 +176,14 @@ export function PipelineProgressBanner({
             <ShieldCheck className="w-3 h-3" /> {deviceInfo}
           </Badge>
           {stage !== "FAILED" && stage !== "UPLOADED" && (
-            <Button size="sm" variant="destructive" onClick={() => void handleStopAndReset()}>
-              Stop &amp; Clear
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={isStopping}
+              onClick={() => void handleStopAndReset()}
+            >
+              {isStopping && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {isStopping ? "Stopping..." : "Stop & Clear"}
             </Button>
           )}
           {(stage === "FAILED" || stage === "UPLOADED") && (

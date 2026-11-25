@@ -55,6 +55,9 @@ impl AppState {
             sidecars.clone(),
             Arc::clone(&whisper),
         ));
+        if let Err(err) = queue.stop_and_clear_all() {
+            tracing::warn!(error = %err, "failed to reset interrupted pipeline jobs on startup");
+        }
 
         let app_handle = app.clone();
         let fonts = Arc::new(FontManager::new_with_watcher(&paths, move || {

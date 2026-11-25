@@ -2,6 +2,13 @@
 
 All notable changes to **SubtitleStudio X** are documented in this file.
 
+## [0.1.2] - 2026-11-26
+
+### What's New in v0.1.2
+- **Portable Whisper CPU Instruction Set:** Built `whisper.cpp` / `ggml` with `GGML_NATIVE=OFF` (SSE4.2 + AVX baseline, AVX-512 / AVX2 disabled) in CI and Release workflows, fixing `0xc000001d` (`STATUS_ILLEGAL_INSTRUCTION`) crashes on CPUs without AVX-512 while preserving full Vulkan/Metal GPU acceleration.
+- **Startup Interrupted-Job Recovery:** Automatically resets stale `EXTRACTING_AUDIO` and `TRANSCRIBING` database statuses left by unexpected exits back to `UPLOADED` or `TRANSCRIBED` on launch so projects never remain stuck at 10%.
+- **Reliable Stop & Clear:** Added stopping feedback, guarded trailing Whisper segment progress events after cancellation, and synchronized React Query cache invalidation across both Home and Editor views.
+
 ## [0.1.1] - 2026-11-25
 
 ### What's New in v0.1.1
